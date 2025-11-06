@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+
+  auth:
+    build: ./auth-service
+    depends_on: [postgres]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      SERVICE_PORT: ${AUTH_SERVICE_PORT:-8001}
+    ports:
+      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
+
+  comm:
+    build: ./communication-service
+    depends_on: [postgres]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      SERVICE_PORT: ${COMM_SERVICE_PORT:-8002}"
+    ports:
+      - "${COMM_SERVICE_PORT}:${COMM_SERVICE_PORT}"
+
+  gateway:
+    build: ./api-gateway
+    depends_on: [auth, comm]
+    env_file:
+      - .env
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      SERVICE_PORT: ${API_GATEWAY_PORT:-8000}
+    ports:
+      - "${API_GATEWAY_PORT}:${API_GATEWAY_PORT}"
+
+volumes:
+  pgdata:
