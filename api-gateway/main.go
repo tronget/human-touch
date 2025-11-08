@@ -24,7 +24,7 @@ func jwtMiddleware(next http.Handler) http.Handler {
 		// validate token if present and set X-User-ID header
 		auth := r.Header.Get("Authorization")
 		if auth == "" {
-			next.ServeHTTP(w, r)
+			http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
 			return
 		}
 		parts := strings.Split(auth, " ")
@@ -32,11 +32,13 @@ func jwtMiddleware(next http.Handler) http.Handler {
 			token, err := jwt.Parse(parts[1], func(t *jwt.Token) (any, error) {
 				return secret, nil
 			})
-			if err == nil && token.Valid {
-				if claims, ok := token.Claims.(jwt.MapClaims); ok {
-					if uid, ok := claims["user_id"].(float64); ok {
-						r.Header.Set("X-User-ID", fmt.Sprintf("%d", int64(uid)))
-					}
+			if err != nil || !token.Valid {
+				http.Error(w, "Invalid token", http.StatusUnauthorized)
+				return
+			}
+			if claims, ok := token.Claims.(jwt.MapClaims); ok {
+				if uid, ok := claims["user_id"].(float64); ok {
+					r.Header.Set("X-User-ID", fmt.Sprintf("%d", int64(uid)))
 				}
 			}
 		}
@@ -45,14 +47,21 @@ func jwtMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
-	authProxy := proxyURL("http://auth:8001")
-	commProxy := proxyURL("http://comm:8002")
+	authProxy := http.StripPrefix("/auth", proxyURL("http://auth:8001"))
+	commProxy := http.StripPrefix("/comm", proxyURL("http://comm:8002"))
 
 	r := chi.NewRouter()
-	r.Use(jwtMiddleware)
 
 	r.Route("/auth", func(r chi.Router) { r.Handle("/*", authProxy) })
-	r.Route("/comm", func(r chi.Router) { r.Handle("/*", commProxy) })
+
+	r.Route("/comm", func(r chi.Router) {
+		r.Use(jwtMiddleware)
+		r.Handle("/*", commProxy)
+	})
+
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
 
 	port := os.Getenv("API_GATEWAY_PORT")
 	if port == "" {
