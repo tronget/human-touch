@@ -11,12 +11,20 @@ services:
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
     ports:
-      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 5s
+      retries: 5
 
   auth:
     build: ./auth-service
-    depends_on: [postgres]
+    depends_on:
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
     environment:
@@ -24,19 +32,21 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       SERVICE_PORT: ${AUTH_SERVICE_PORT:-8001}
     ports:
-      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
+      - ${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}
 
   comm:
     build: ./communication-service
-    depends_on: [postgres]
+    depends_on:
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
     environment:
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
-      SERVICE_PORT: ${COMM_SERVICE_PORT:-8002}"
+      SERVICE_PORT: ${COMM_SERVICE_PORT:-8002}
     ports:
-      - "${COMM_SERVICE_PORT}:${COMM_SERVICE_PORT}"
+      - ${COMM_SERVICE_PORT}:${COMM_SERVICE_PORT}
 
   gateway:
     build: ./api-gateway
@@ -47,7 +57,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       SERVICE_PORT: ${API_GATEWAY_PORT:-8000}
     ports:
-      - "${API_GATEWAY_PORT}:${API_GATEWAY_PORT}"
+      - ${API_GATEWAY_PORT}:${API_GATEWAY_PORT}
 
 volumes:
   pgdata:
