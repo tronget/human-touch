@@ -29,7 +29,7 @@ func main() {
 	r.Post("/login", LoginHandler)
 
 	r.Group(func(r chi.Router) {
-		r.Use(WithUID())
+		r.Use(WithUID)
 		r.Get("/me", func(w http.ResponseWriter, r *http.Request) {
 			uid := r.Context().Value(CtxUserID).(int64)
 			msg := fmt.Sprintf("Your User ID: %d", uid)
