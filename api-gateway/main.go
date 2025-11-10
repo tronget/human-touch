@@ -21,6 +21,7 @@ func main() {
 	commProxy := http.StripPrefix("/comm", proxyURL("http://comm:8002"))
 
 	r := chi.NewRouter()
+	r.Use(middleware.CORS)
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Handle("/login", authProxy)
