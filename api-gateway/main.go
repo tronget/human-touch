@@ -24,7 +24,7 @@ func main() {
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Handle("/login", authProxy)
-		r.Handle("/post", authProxy)
+		r.Handle("/register", authProxy)
 
 		// remaining auth routes protected by JWT middleware
 		r.Group(func(r chi.Router) {
