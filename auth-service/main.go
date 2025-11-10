@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -13,7 +14,7 @@ import (
 func main() {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		dsn = "postgres://pguser:pgpass@localhost:5432/microdb?sslmode=disable"
+		log.Fatal("Missing `DATABASE_URL` in environment variables")
 	}
 	dbx, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
@@ -27,14 +28,12 @@ func main() {
 	r.Post("/register", RegisterHandler)
 	r.Post("/login", LoginHandler)
 
-	// protected example
 	r.Group(func(r chi.Router) {
-		r.Use(JWTAuth)
+		r.Use(WithUID())
 		r.Get("/me", func(w http.ResponseWriter, r *http.Request) {
 			uid := r.Context().Value(CtxUserID).(int64)
-			// fetch user...
-			_ = uid
-			w.Write([]byte("ok"))
+			msg := fmt.Sprintf("Your User ID: %d", uid)
+			w.Write([]byte(msg))
 		})
 	})
 

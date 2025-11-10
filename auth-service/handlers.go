@@ -44,9 +44,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// get DB from context
 	db := r.Context().Value(CtxDBKey).(*DB)
-	user := &User{Email: in.Email, Password: in.Password, Name: in.Name}
-	// in production check duplicates, use RETURNING id
-	_, err := db.X.Exec(`INSERT INTO users (email, password, name) VALUES ($1, $2, $3)`, user.Email, hashPassword(in.Password), user.Name)
+	_, err := db.X.Exec(`INSERT INTO users (email, password, name) VALUES ($1, $2, $3)`, in.Email, hashPassword(in.Password), in.Name)
 	if err != nil {
 		http.Error(w, "db err: "+err.Error(), http.StatusInternalServerError)
 		return
