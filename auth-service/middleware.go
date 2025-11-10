@@ -31,11 +31,12 @@ func WithUID() func(http.Handler) http.Handler {
 				return
 			}
 
-			if _, err := strconv.ParseInt(uid, 10, 64); err != nil {
+			v, err := strconv.ParseInt(uid, 10, 64)
+			if err != nil {
 				http.Error(w, "Invalid user ID", http.StatusUnauthorized)
 				return
 			}
-			ctx := context.WithValue(r.Context(), CtxUserID, uid)
+			ctx := context.WithValue(r.Context(), CtxUserID, v)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
