@@ -24,17 +24,20 @@ func CreateMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad body", http.StatusBadRequest)
 		return
 	}
-	// get from user id from ctx (gateway should pass it or JWT middleware here)
-	uid := r.Context().Value("user_id").(int64)
+
+	db := r.Context().Value(CtxDBKey).(*DB)
+	uid := r.Context().Value(CtxUserID).(int64)
 	now := time.Now()
-	// insert
-	_, err := db.X.Exec(`INSERT INTO messages (conversation_id, from_user_id, to_user_id, text, created_at) VALUES ($1,$2,$3,$4,$5)`,
-		in.ConversationID, uid, in.ToUserID, in.Text, now)
+
+	_, err := db.X.Exec(
+		`INSERT INTO messages (conversation_id, from_user_id, to_user_id, text, created_at) VALUES ($1,$2,$3,$4,$5)`,
+		in.ConversationID, uid, in.ToUserID, in.Text, now,
+	)
 	if err != nil {
 		http.Error(w, "db error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// publish to websocket clients (in-memory broadcaster)
+
 	BroadcastToUser(in.ToUserID, map[string]any{
 		"type": "new_message",
 		"from": uid,

@@ -10,18 +10,22 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var db *DB
-
 func main() {
 	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		log.Fatal("Missing `DATABASE_URL` in environment variables")
+	}
 	dbx, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
-	db = &DB{X: dbx}
+	db := &DB{X: dbx}
 
 	r := chi.NewRouter()
-	// JWT middleware or gateway will pass user info
+
+	r.Use(WithDB(db))
+	r.Use(WithUID())
+
 	r.Post("/messages", CreateMessage)
 	r.Get("/messages/{convId}", GetMessages)
 	r.Get("/ws", wsHandler)

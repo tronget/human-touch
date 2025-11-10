@@ -8,7 +8,9 @@ import (
 )
 
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool {
+		return r.Header.Get("Origin") == "http://gateway:8000"
+	},
 }
 
 type client struct {
@@ -19,13 +21,15 @@ type client struct {
 var clients = struct {
 	sync.RWMutex
 	m map[int64][]*client
-}{m: make(map[int64][]*client)}
+}{
+	m: make(map[int64][]*client),
+}
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
-	// в реале проверить JWT из query/header
-	uid := r.Context().Value("user_id").(int64)
+	uid := r.Context().Value(CtxUserID).(int64)
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
+		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
 		return
 	}
 	c := &client{conn: conn, userID: uid}
