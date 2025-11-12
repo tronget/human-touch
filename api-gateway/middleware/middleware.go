@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -11,6 +12,9 @@ import (
 
 func JWT(next http.Handler) http.Handler {
 	secret := []byte(os.Getenv("JWT_SECRET"))
+	if len(secret) == 0 {
+		log.Fatal("Missing `JWT_SECRET` in environment variables")
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// validate token if present and set X-User-ID header
 		auth := r.Header.Get("Authorization")
