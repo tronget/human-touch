@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/tronget/communication-service/storage"
 )
 
 func main() {
@@ -19,15 +20,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	db := &DB{X: dbx}
+	dbLogger := log.New(os.Stdout, "db ", log.LstdFlags|log.Lmicroseconds)
+	db := storage.NewDB(dbx, dbLogger)
 
 	r := chi.NewRouter()
 
-	r.Use(WithDB(db))
-	r.Use(WithUID())
+	r.Group(func(r chi.Router) {
+		r.Use(WithDB(db), WithUID)
+		r.Post("/messages", CreateMessage)
+		r.Get("/messages/{convId}", GetMessages)
+	})
 
-	r.Post("/messages", CreateMessage)
-	r.Get("/messages/{convId}", GetMessages)
 	r.Get("/ws", wsHandler)
 
 	port := os.Getenv("COMM_SERVICE_PORT")
