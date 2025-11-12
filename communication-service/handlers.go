@@ -6,43 +6,33 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jmoiron/sqlx"
+	"github.com/tronget/communication-service/storage"
 )
 
-type DB struct {
-	// wrapper around sqlx.DB
-	X *sqlx.DB
-}
-
 func CreateMessage(w http.ResponseWriter, r *http.Request) {
-	var in struct {
-		ConversationID int64  `json:"conversation_id"`
-		ToUserID       int64  `json:"to_user_id"`
-		Text           string `json:"text"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+	var msg Message
+	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
 		http.Error(w, "bad body", http.StatusBadRequest)
 		return
 	}
 
-	db := r.Context().Value(CtxDBKey).(*DB)
+	db := r.Context().Value(CtxDBKey).(*storage.DB)
 	uid := r.Context().Value(CtxUserID).(int64)
 	now := time.Now()
-
-	_, err := db.X.Exec(
-		`INSERT INTO messages (conversation_id, from_user_id, to_user_id, text, created_at) VALUES ($1,$2,$3,$4,$5)`,
-		in.ConversationID, uid, in.ToUserID, in.Text, now,
+	_, err := db.Exec(
+		`INSERT INTO messages (conversation_id, sender_id, receiver_id, content, created_at) VALUES ($1,$2,$3,$4,$5)`,
+		msg.ConversationID, uid, msg.ReceiverID, msg.Content, now,
 	)
 	if err != nil {
 		http.Error(w, "db error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	BroadcastToUser(in.ToUserID, map[string]any{
-		"type": "new_message",
-		"from": uid,
-		"text": in.Text,
-		"time": now,
+	BroadcastToUser(msg.ReceiverID, map[string]any{
+		"type":       "new_message",
+		"sender_id":  uid,
+		"content":    msg.Content,
+		"created_at": now,
 	})
 	w.WriteHeader(http.StatusCreated)
 }
