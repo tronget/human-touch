@@ -1,7 +1,7 @@
 package user
 
 import (
-	"github.com/tronget/auth-service/pkg/storage"
+	"github.com/tronget/human-touch/shared/storage"
 	"golang.org/x/crypto/bcrypt"
 )
 

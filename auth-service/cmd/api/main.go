@@ -5,16 +5,16 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"github.com/tronget/auth-service/internal/config"
-	"github.com/tronget/auth-service/internal/server"
-	"github.com/tronget/auth-service/pkg/logx"
-	"github.com/tronget/auth-service/pkg/storage"
+	"github.com/tronget/human-touch/auth-service/internal/config"
+	"github.com/tronget/human-touch/auth-service/internal/server"
+	"github.com/tronget/human-touch/shared/logx"
+	"github.com/tronget/human-touch/shared/storage"
 )
 
 func main() {
 	cfg := config.MustLoad()
 
-	logx.SetupLogger(cfg)
+	logx.SetupLogger(cfg.Env)
 
 	db, err := initDB(cfg)
 	if err != nil {

@@ -1,14 +1,14 @@
-package main
+package ws
 
 import (
 	"errors"
 	"log"
 	"net/http"
-	"os"
 	"sync"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
+	"github.com/tronget/human-touch/communication-service/internal/constants"
+	"github.com/tronget/human-touch/communication-service/internal/models"
 )
 
 var upgrader = websocket.Upgrader{
@@ -32,10 +32,8 @@ var clients = struct {
 	m: make(map[int64][]*client),
 }
 
-func wsHandler(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
-	uid, err := ValidateToken(token)
-
+func WsHandler(w http.ResponseWriter, r *http.Request) {
+	uid, err := UserIDFromRequest(r)
 	if err != nil {
 		http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
 		return
@@ -95,33 +93,10 @@ func BroadcastToUser(userID int64, payload any) {
 	}
 }
 
-func ValidateToken(token string) (int64, error) {
-	if token == "" {
-		return 0, errors.New("missing token")
+func UserIDFromRequest(r *http.Request) (int64, error) {
+	if user, ok := r.Context().Value(constants.CtxUserKey).(models.User); ok && user.ID != 0 {
+		return user.ID, nil
 	}
 
-	secret := []byte(os.Getenv("JWT_SECRET"))
-	if len(secret) == 0 {
-		return 0, errors.New("missing `JWT_SECRET` in environment variables")
-	}
-
-	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (any, error) {
-		return secret, nil
-	})
-
-	if err != nil || !parsedToken.Valid {
-		return 0, errors.New("invalid token")
-	}
-
-	claims, ok := parsedToken.Claims.(jwt.MapClaims)
-	if !ok {
-		return 0, errors.New("invalid claims")
-	}
-
-	uid, ok := claims["user_id"].(float64)
-	if !ok {
-		return 0, errors.New("invalid user id")
-	}
-
-	return int64(uid), nil
+	return 0, errors.New("user not found in request's context")
 }

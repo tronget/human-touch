@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/tronget/auth-service/internal/constants"
+	"github.com/tronget/human-touch/auth-service/internal/constants"
 )
 
 func WithUID(next http.Handler) http.Handler {

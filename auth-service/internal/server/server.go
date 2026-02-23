@@ -5,10 +5,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/tronget/auth-service/internal/config"
-	"github.com/tronget/auth-service/internal/domain/user"
-	"github.com/tronget/auth-service/internal/middleware"
-	"github.com/tronget/auth-service/pkg/storage"
+	"github.com/tronget/human-touch/auth-service/internal/config"
+	"github.com/tronget/human-touch/auth-service/internal/domain/user"
+	"github.com/tronget/human-touch/auth-service/internal/middleware"
+	"github.com/tronget/human-touch/shared/storage"
 )
 
 type Server interface {

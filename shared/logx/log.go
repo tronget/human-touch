@@ -4,8 +4,6 @@ import (
 	"log"
 	"log/slog"
 	"os"
-
-	"github.com/tronget/auth-service/internal/config"
 )
 
 const (
@@ -14,10 +12,10 @@ const (
 	EnvProd  = "prod"
 )
 
-func SetupLogger(cfg *config.Config) {
+func SetupLogger(env string) {
 	var handler slog.Handler
 
-	switch cfg.Env {
+	switch env {
 	case EnvLocal:
 		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			AddSource: true,

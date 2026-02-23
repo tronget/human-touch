@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/tronget/auth-service/pkg/jwt"
-	"github.com/tronget/auth-service/pkg/storage"
+	"github.com/tronget/human-touch/auth-service/pkg/jwt"
+	"github.com/tronget/human-touch/shared/storage"
 	"golang.org/x/crypto/bcrypt"
 )
 

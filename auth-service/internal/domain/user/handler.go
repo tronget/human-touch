@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/tronget/auth-service/internal/config"
-	"github.com/tronget/auth-service/internal/constants"
-	"github.com/tronget/auth-service/internal/dto"
+	"github.com/tronget/human-touch/auth-service/internal/config"
+	"github.com/tronget/human-touch/auth-service/internal/constants"
+	"github.com/tronget/human-touch/auth-service/internal/dto"
 )
 
 func RegisterHandler(service Service) http.HandlerFunc {
