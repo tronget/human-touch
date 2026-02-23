@@ -1,0 +1,6 @@
+env: "local"
+postgre_dsn: $DATABASE_URL
+jwt_secret: $JWT_SECRET
+server:
+  address: $AUTH_SERVICE_ADDRESS
+  timeout: 4s

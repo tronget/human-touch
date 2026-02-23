@@ -4,23 +4,9 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+
+	"github.com/tronget/auth-service/internal/constants"
 )
-
-type ctxKey string
-
-const (
-	CtxDBKey  ctxKey = "db"
-	CtxUserID ctxKey = "user_id"
-)
-
-func WithDB(db *DB) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := context.WithValue(r.Context(), CtxDBKey, db)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
-}
 
 func WithUID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +21,7 @@ func WithUID(next http.Handler) http.Handler {
 			http.Error(w, "Invalid user ID", http.StatusUnauthorized)
 			return
 		}
-		ctx := context.WithValue(r.Context(), CtxUserID, v)
+		ctx := context.WithValue(r.Context(), constants.CtxUserID, v)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
