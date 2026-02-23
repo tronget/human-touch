@@ -9,6 +9,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/tronget/auth-service/internal/config"
 	"github.com/tronget/auth-service/internal/domain/user"
+	"github.com/tronget/auth-service/internal/middleware"
 	"github.com/tronget/auth-service/pkg/logx"
 	"github.com/tronget/auth-service/pkg/storage"
 )
@@ -32,7 +33,7 @@ func main() {
 	r.Post("/login", user.LoginHandler(userService, cfg))
 
 	r.Group(func(r chi.Router) {
-		r.Use(WithUID)
+		r.Use(middleware.WithUID)
 		r.Get("/me", user.MeHandler())
 	})
 
