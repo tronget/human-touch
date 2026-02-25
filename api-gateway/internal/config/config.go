@@ -8,9 +8,11 @@ import (
 )
 
 type Config struct {
-	ServiceAddress string `yaml:"server.address" env:"AUTH_SERVICE_ADDRESS"`
-	DSN            string `yaml:"postgre_dsn" env:"DATABASE_URL"`
-	JwtSecret      string `yaml:"jwt_secret" env:"JWT_SECRET"`
+	ServiceAddress string `yaml:"server.address" env:"API_GATEWAY_ADDRESS" env-default:":8000"`
+	DSN            string `yaml:"postgre_dsn" env:"DATABASE_URL" required:"true"`
+	JwtSecret      string `yaml:"jwt_secret" env:"JWT_SECRET" required:"true"`
+	AuthServiceURL string `yaml:"auth_service_url" env:"AUTH_SERVICE_URL" env-default:"http://auth:8001"`
+	CommServiceURL string `yaml:"comm_service_url" env:"COMM_SERVICE_URL" env-default:"http://comm:8002"`
 	LogConfig
 }
 

@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/tronget/human-touch/auth-service/internal/config"
-	"github.com/tronget/human-touch/auth-service/internal/constants"
 	"github.com/tronget/human-touch/auth-service/internal/dto"
 )
 
@@ -64,8 +63,12 @@ func LoginHandler(service Service, cfg *config.Config) http.HandlerFunc {
 
 func MeHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		uid := r.Context().Value(constants.CtxUserID).(int64)
-		msg := fmt.Sprintf("Your User ID: %d", uid)
+		uid := r.Header.Get("X-User-ID")
+		if uid == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		msg := fmt.Sprintf("Your User ID: %s", uid)
 		w.Write([]byte(msg))
 	}
 }

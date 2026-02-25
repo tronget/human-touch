@@ -1,5 +1,8 @@
+ARG API_GATEWAY_PORT
+ARG GO_VERSION
+
 # ====== Build stage ======
-FROM golang:1.26-alpine AS builder
+FROM golang:${GO_VERSION}-alpine AS builder
 
 WORKDIR /app
 
@@ -21,6 +24,6 @@ WORKDIR /root/
 # Копируем бинарник из builder
 COPY --from=builder /app/api-gateway .
 
-EXPOSE 8080
+EXPOSE ${API_GATEWAY_PORT}
 
 CMD ["./api-gateway"]

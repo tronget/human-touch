@@ -1,11 +1,8 @@
 package middleware
 
 import (
-	"context"
 	"net/http"
 	"strconv"
-
-	"github.com/tronget/human-touch/auth-service/internal/constants"
 )
 
 func WithUID(next http.Handler) http.Handler {
@@ -16,12 +13,11 @@ func WithUID(next http.Handler) http.Handler {
 			return
 		}
 
-		v, err := strconv.ParseInt(uid, 10, 64)
+		_, err := strconv.ParseInt(uid, 10, 64)
 		if err != nil {
 			http.Error(w, "Invalid user ID", http.StatusUnauthorized)
 			return
 		}
-		ctx := context.WithValue(r.Context(), constants.CtxUserID, v)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r)
 	})
 }

@@ -1,5 +1,8 @@
+ARG AUTH_SERVICE_PORT
+ARG GO_VERSION
+
 # ====== Build stage ======
-FROM golang:1.26-alpine AS builder
+FROM golang:${GO_VERSION}-alpine AS builder
 
 WORKDIR /app
 
@@ -17,6 +20,6 @@ WORKDIR /root/
 
 COPY --from=builder /app/auth-service .
 
-EXPOSE 8080
+EXPOSE ${AUTH_SERVICE_PORT}
 
 CMD ["./auth-service"]

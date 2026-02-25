@@ -1,0 +1,7 @@
+env: "local"
+postgre_dsn: $DATABASE_URL
+jwt_secret: $JWT_SECRET
+auth_service_url: $AUTH_SERVICE_URL
+comm_service_url: $COMM_SERVICE_URL
+server:
+  address: $API_GATEWAY_ADDRESS
