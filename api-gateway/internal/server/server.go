@@ -29,7 +29,11 @@ func NewServer(cfg *config.Config, db *storage.DB) Server {
 }
 
 func proxyURL(target string) *httputil.ReverseProxy {
-	u, _ := url.Parse(target)
+	u, err := url.Parse(target)
+	if err != nil {
+		slog.Error("failed to parse target URL", "error", err)
+		panic(err)
+	}
 	proxy := httputil.NewSingleHostReverseProxy(u)
 	proxy.FlushInterval = -1
 	return proxy
