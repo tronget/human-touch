@@ -1,13 +1,16 @@
 package user
 
 import (
+	"context"
+
 	"github.com/tronget/human-touch/shared/storage"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Repository interface {
-	CreateUser(user *User) error
-	GetUserByEmail(email string) (*User, error)
+	CreateUser(ctx context.Context, user *User) error
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	GetUserByID(ctx context.Context, id string) (*User, error)
 }
 
 type repository struct {
@@ -18,9 +21,9 @@ func NewRepository(db *storage.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) CreateUser(u *User) error {
+func (r *repository) CreateUser(ctx context.Context, u *User) error {
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-	res, err := r.db.Exec(`INSERT INTO users (email, password, name) VALUES ($1, $2, $3)`, u.Email, string(hashed), u.Name)
+	res, err := r.db.ExecContext(ctx, `INSERT INTO users (email, password, name) VALUES ($1, $2, $3)`, u.Email, string(hashed), u.Name)
 	if err != nil {
 		return err
 	}
@@ -29,20 +32,20 @@ func (r *repository) CreateUser(u *User) error {
 	return nil
 }
 
-func (r *repository) GetUserByEmail(email string) (*User, error) {
+func (r *repository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	var u User
-	err := r.db.Get(&u, "SELECT id, email, password, name FROM users WHERE email=$1", email)
+	err := r.db.GetContext(ctx, &u, "SELECT id, email, password, name FROM users WHERE email=$1", email)
 	if err != nil {
 		return nil, err
 	}
 	return &u, nil
 }
 
-// func (r *repository) IsEmailTaken(email string) (bool, error) {
-// 	var exists bool
-// 	err := r.db.Get(&exists, "SELECT EXISTS(SELECT 1 FROM users WHERE email=$1)", email)
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	return exists, nil
-// }
+func (r *repository) GetUserByID(ctx context.Context, id string) (*User, error) {
+	var u User
+	err := r.db.GetContext(ctx, &u, "SELECT id, email, password, name FROM users WHERE id=$1", id)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}

@@ -1,25 +1,31 @@
-ARG AUTH_SERVICE_PORT
-ARG GO_VERSION
+ARG GO_VERSION=1.26
 
 # ====== Build stage ======
 FROM golang:${GO_VERSION}-alpine AS builder
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
-RUN go mod tidy
+# Копируем shared модуль
+COPY shared/go.mod shared/go.sum ./shared/
+COPY shared/ ./shared/
 
-COPY . .
+# Копируем сервис
+COPY auth-service/go.mod auth-service/go.sum ./auth-service/
+WORKDIR /app/auth-service
+RUN go mod download
 
-RUN go build -o auth-service .
+WORKDIR /app
+COPY auth-service/ ./auth-service/
+
+WORKDIR /app/auth-service
+RUN CGO_ENABLED=0 go build -o /auth-service ./cmd/api
 
 # ====== Run stage ======
 FROM alpine:latest
 
 WORKDIR /root/
 
-COPY --from=builder /app/auth-service .
-
-EXPOSE ${AUTH_SERVICE_PORT}
+COPY --from=builder /auth-service .
+COPY --from=builder /app/auth-service/config ./config
 
 CMD ["./auth-service"]

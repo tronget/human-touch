@@ -37,8 +37,8 @@ func (s *server) Run() error {
 	r.Post("/login", user.LoginHandler(userService, s.cfg))
 
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.WithUID)
-		r.Get("/me", user.MeHandler())
+		r.Use(middleware.ExtractHeadersMiddleware)
+		r.Get("/me", user.MeHandler(userService))
 	})
 
 	slog.Info("auth service listening on " + s.cfg.ServiceAddress)

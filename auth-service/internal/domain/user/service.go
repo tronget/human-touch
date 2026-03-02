@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,9 +11,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type UserDto struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+	Name  string `json:"name"`
+}
+
 type Service interface {
-	RegisterUser(email, password, name string) (error, int)
-	LoginUser(email, password string, jwtSecret []byte) (jwt.JwtToken, error, int)
+	RegisterUser(ctx context.Context, email, password, name string) (error, int)
+	LoginUser(ctx context.Context, email, password string, jwtSecret []byte) (jwt.JwtToken, error, int)
+	GetUserByID(ctx context.Context, id string) (*UserDto, error)
 }
 
 type service struct {
@@ -23,7 +31,7 @@ func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-func (s *service) RegisterUser(email, password, name string) (error, int) {
+func (s *service) RegisterUser(ctx context.Context, email, password, name string) (error, int) {
 	if email == "" || password == "" || name == "" {
 		slog.Warn("Invalid user data", "email", email, "name", name)
 		return fmt.Errorf("Invalid user data"), http.StatusBadRequest
@@ -31,7 +39,7 @@ func (s *service) RegisterUser(email, password, name string) (error, int) {
 
 	user := NewUser(email, password, name)
 
-	if err := s.repo.CreateUser(user); err != nil {
+	if err := s.repo.CreateUser(ctx, user); err != nil {
 		if storage.IsUniqueViolation(err) {
 			slog.Warn("Email already taken during registration", "email", user.Email)
 			return fmt.Errorf("Email already taken"), http.StatusConflict
@@ -44,13 +52,13 @@ func (s *service) RegisterUser(email, password, name string) (error, int) {
 	return nil, http.StatusCreated
 }
 
-func (s *service) LoginUser(email, password string, jwtSecret []byte) (jwt.JwtToken, error, int) {
+func (s *service) LoginUser(ctx context.Context, email, password string, jwtSecret []byte) (jwt.JwtToken, error, int) {
 	if email == "" || password == "" {
 		slog.Warn("Invalid login data", "email", email)
 		return "", fmt.Errorf("Invalid login data"), http.StatusBadRequest
 	}
 
-	user, err := s.repo.GetUserByEmail(email)
+	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
 		slog.Warn("User not found by email during login",
 			"email", email,
@@ -74,4 +82,25 @@ func (s *service) LoginUser(email, password string, jwtSecret []byte) (jwt.JwtTo
 	}
 
 	return token, nil, http.StatusOK
+}
+
+func (s *service) GetUserByID(ctx context.Context, id string) (*UserDto, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	user, err := s.repo.GetUserByID(ctx, id)
+	if err != nil {
+		slog.Warn("User not found by ID", "id", id, "error", err.Error())
+		return nil, fmt.Errorf("User not found")
+	}
+
+	userDto := &UserDto{
+		ID:    id,
+		Email: user.Email,
+		Name:  user.Name,
+	}
+	return userDto, nil
 }

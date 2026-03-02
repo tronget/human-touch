@@ -2,12 +2,12 @@ package user
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/tronget/human-touch/auth-service/internal/config"
 	"github.com/tronget/human-touch/auth-service/internal/dto"
+	"github.com/tronget/human-touch/auth-service/internal/userctx"
 )
 
 func RegisterHandler(service Service) http.HandlerFunc {
@@ -19,6 +19,7 @@ func RegisterHandler(service Service) http.HandlerFunc {
 		}
 
 		err, statusCode := service.RegisterUser(
+			r.Context(),
 			in.Email,
 			in.Password,
 			in.Name,
@@ -42,6 +43,7 @@ func LoginHandler(service Service, cfg *config.Config) http.HandlerFunc {
 		}
 
 		token, err, statusCode := service.LoginUser(
+			r.Context(),
 			in.Email,
 			in.Password,
 			[]byte(cfg.JwtSecret),
@@ -52,23 +54,38 @@ func LoginHandler(service Service, cfg *config.Config) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
 
 		responseMsg := map[string]string{
 			"token": "Bearer " + string(token),
 		}
-		json.NewEncoder(w).Encode(responseMsg)
+		err = json.NewEncoder(w).Encode(responseMsg)
+		if err != nil {
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
-func MeHandler() http.HandlerFunc {
+func MeHandler(service Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		uid := r.Header.Get("X-User-ID")
-		if uid == "" {
+		uid, ok := userctx.UserID(r.Context())
+		if !ok || uid == "" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		msg := fmt.Sprintf("Your User ID: %s", uid)
-		w.Write([]byte(msg))
+
+		userDto, err := service.GetUserByID(r.Context(), uid)
+		if err != nil {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		err = json.NewEncoder(w).Encode(*userDto)
+		if err != nil {
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+			return
+		}
 	}
 }

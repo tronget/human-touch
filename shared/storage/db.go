@@ -68,7 +68,7 @@ func (db *DB) Get(dest any, query string, args ...any) error {
 	return err
 }
 
-func (db *DB) GetSelect(ctx context.Context, dest any, query string, args ...any) error {
+func (db *DB) GetContext(ctx context.Context, dest any, query string, args ...any) error {
 	start := time.Now()
 	err := db.X.GetContext(ctx, dest, query, args...)
 	db.logQuery("Get", query, args, time.Since(start), err)
