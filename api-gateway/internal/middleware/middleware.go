@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/tronget/human-touch/shared/storage"
 )
 
@@ -17,10 +18,12 @@ func JWT(secret []byte) func(next http.Handler) http.Handler {
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// validate token if present and set X-User-ID header
 			auth := r.Header.Get("Authorization")
 			if auth == "" {
-				http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+				auth = r.URL.Query().Get("token")
+			}
+			if auth == "" {
+				http.Error(w, "Missing Authorization", http.StatusUnauthorized)
 				return
 			}
 
@@ -60,6 +63,16 @@ func JWT(secret []byte) func(next http.Handler) http.Handler {
 	}
 }
 
+func WithRequestID(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestID := uuid.New().String()
+		r.Header.Set("X-Request-ID", requestID)
+		w.Header().Set("X-Request-ID", requestID)
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func RequestSizeLimit(limit int64) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -78,7 +91,7 @@ func IsExistingUser(db *storage.DB) func(http.Handler) http.Handler {
 				return
 			}
 			var exists bool
-			err := db.Get(&exists, "SELECT EXISTS(SELECT 1 FROM app_user WHERE id=$1)", uid)
+			err := db.Get(&exists, "SELECT EXISTS(SELECT 1 FROM users WHERE id=$1)", uid)
 			if err != nil {
 				http.Error(w, "Internal error", http.StatusInternalServerError)
 				slog.Error("user existence check failed", "err", err)

@@ -1,7 +1,7 @@
 package config
 
 import (
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -24,17 +24,20 @@ func MustLoad() *Config {
 	configPath := os.Getenv("CONFIG_PATH")
 
 	if configPath == "" {
-		log.Fatal("CONFIG_PATH environment variable is not set")
+		slog.Error("CONFIG_PATH environment variable is not set")
+		panic("CONFIG_PATH environment variable is not set")
 	}
 
 	if _, err := os.Stat(configPath); err != nil {
-		log.Fatalf("error opening configuration file: %v", err)
+		slog.Error("error opening configuration file", "error", err.Error())
+		panic("error opening configuration file")
 	}
 
 	var cfg Config
 	err := cleanenv.ReadConfig(configPath, &cfg)
 	if err != nil {
-		log.Fatalf("error reading config: %v", err)
+		slog.Error("error reading configuration file", "error", err.Error())
+		panic("error reading configuration file")
 	}
 
 	return &cfg

@@ -1,29 +1,31 @@
-ARG API_GATEWAY_PORT
-ARG GO_VERSION
+ARG GO_VERSION=1.26
 
 # ====== Build stage ======
 FROM golang:${GO_VERSION}-alpine AS builder
 
 WORKDIR /app
 
-# Скопируем go.mod и go.sum для установки зависимостей
-COPY go.mod go.sum ./
-RUN go mod tidy
+# Копируем shared модуль
+COPY shared/go.mod shared/go.sum ./shared/
+COPY shared/ ./shared/
 
-# Копируем исходники
-COPY . .
+# Копируем сервис
+COPY api-gateway/go.mod api-gateway/go.sum ./api-gateway/
+WORKDIR /app/api-gateway
+RUN go mod download
 
-# Собираем бинарник
-RUN go build -o api-gateway .
+WORKDIR /app
+COPY api-gateway/ ./api-gateway/
+
+WORKDIR /app/api-gateway
+RUN CGO_ENABLED=0 go build -o /api-gateway ./cmd/api
 
 # ====== Run stage ======
 FROM alpine:latest
 
 WORKDIR /root/
 
-# Копируем бинарник из builder
-COPY --from=builder /app/api-gateway .
-
-EXPOSE ${API_GATEWAY_PORT}
+COPY --from=builder /api-gateway .
+COPY --from=builder /app/api-gateway/config ./config
 
 CMD ["./api-gateway"]

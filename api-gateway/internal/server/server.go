@@ -30,7 +30,15 @@ func NewServer(cfg *config.Config, db *storage.DB) Server {
 
 func proxyURL(target string) *httputil.ReverseProxy {
 	u, _ := url.Parse(target)
-	return httputil.NewSingleHostReverseProxy(u)
+	proxy := httputil.NewSingleHostReverseProxy(u)
+	proxy.FlushInterval = -1
+	return proxy
+}
+
+var commonMiddlewares = []func(http.Handler) http.Handler{
+	middleware.CORS,
+	middleware.RequestSizeLimit(10 * 1024 * 1024),
+	middleware.WithRequestID,
 }
 
 func (s *server) Run() error {
@@ -38,13 +46,18 @@ func (s *server) Run() error {
 	commProxy := http.StripPrefix("/comm", proxyURL(s.cfg.CommServiceURL))
 
 	r := chi.NewRouter()
-	r.Use(
-		middleware.CORS,
-		middleware.RequestSizeLimit(10*1024*1024),
-	)
+	r.Use(commonMiddlewares...)
 
 	r.Route("/auth", func(r chi.Router) {
-		r.Handle("/*", authProxy)
+		r.Post("/register", authProxy.ServeHTTP)
+		r.Post("/login", authProxy.ServeHTTP)
+		r.Group(func(r chi.Router) {
+			r.Use(
+				middleware.JWT([]byte(s.cfg.JwtSecret)),
+				middleware.IsExistingUser(s.db),
+			)
+			r.Handle("/*", authProxy)
+		})
 	})
 
 	r.Route("/comm", func(r chi.Router) {
