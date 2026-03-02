@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
-	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/tronget/human-touch/shared/jwtx"
 	"github.com/tronget/human-touch/shared/storage"
 )
 
@@ -18,46 +16,21 @@ func JWT(secret []byte) func(next http.Handler) http.Handler {
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			auth := r.Header.Get("Authorization")
-			if auth == "" {
-				auth = r.URL.Query().Get("token")
+			token := r.Header.Get("Authorization")
+			if token == "" {
+				token = r.URL.Query().Get("token")
 			}
-			if auth == "" {
-				http.Error(w, "Missing Authorization", http.StatusUnauthorized)
+			if token == "" {
+				http.Error(w, "Missing Authorization token", http.StatusUnauthorized)
 				return
 			}
 
-			authToken, ok := strings.CutPrefix(auth, "Bearer ")
-			if !ok {
-				http.Error(w, "Invalid Authorization header", http.StatusUnauthorized)
+			uid, err := jwtx.ValidateAndExtractUserID(token, secret)
+			if err != nil {
+				http.Error(w, "Invalid token: "+err.Error(), http.StatusUnauthorized)
 				return
 			}
-
-			token, err := jwt.Parse(authToken, func(t *jwt.Token) (any, error) {
-				return secret, nil
-			})
-			if err != nil || !token.Valid {
-				http.Error(w, "Invalid token", http.StatusUnauthorized)
-				return
-			}
-
-			claims, ok := token.Claims.(jwt.MapClaims)
-			if !ok {
-				http.Error(w, "Invalid claims", http.StatusUnauthorized)
-				return
-			}
-
-			if exp, ok := claims["exp"].(int64); !ok || exp < time.Now().Unix() {
-				http.Error(w, "Token has expired", http.StatusUnauthorized)
-				return
-			}
-
-			if uid, ok := claims["user_id"].(int64); !ok {
-				http.Error(w, "Invalid user id", http.StatusUnauthorized)
-				return
-			} else {
-				r.Header.Set("X-User-ID", fmt.Sprintf("%d", uid))
-			}
+			r.Header.Set("X-User-ID", fmt.Sprintf("%d", uid))
 			next.ServeHTTP(w, r)
 		})
 	}
