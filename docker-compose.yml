@@ -2,18 +2,15 @@ services:
   postgres:
     image: postgres:15
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d
-    ports:
-      - ${POSTGRES_PORT}:${POSTGRES_PORT}
+    networks:
+      - internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 3s
@@ -21,58 +18,65 @@ services:
       retries: 5
 
   auth:
-    build: 
-      context: ./auth-service
-      args:
-        AUTH_SERVICE_PORT: ${AUTH_SERVICE_PORT:-8001}
-        GO_VERSION: ${GO_VERSION:-1.26}
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
-    env_file:
-      - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      CONFIG_PATH: /app/config/config.yml
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      CONFIG_PATH: /root/config/config.yml
       JWT_SECRET: ${JWT_SECRET}
-      SERVICE_PORT: ${AUTH_SERVICE_PORT:-8001}
-    ports:
-      - ${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}
+      AUTH_SERVICE_ADDRESS: ":8001"
+    networks:
+      - internal
 
   comm:
-    build: 
-      context: ./communication-service
-      args:
-        COMM_SERVICE_PORT: ${COMM_SERVICE_PORT:-8002}
-        GO_VERSION: ${GO_VERSION:-1.26}
+    build:
+      context: .
+      dockerfile: communication-service/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
-    env_file:
-      - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      CONFIG_PATH: /root/config/config.yml
+      COMM_SERVICE_ADDRESS: ":8002"
       JWT_SECRET: ${JWT_SECRET}
-      SERVICE_PORT: ${COMM_SERVICE_PORT:-8002}
-    ports:
-      - ${COMM_SERVICE_PORT}:${COMM_SERVICE_PORT}
-
+    networks:
+      - internal
+  
   gateway:
-    build: 
-      context: ./api-gateway
-      args:
-        API_GATEWAY_PORT: ${API_GATEWAY_PORT:-8000}
-        GO_VERSION: ${GO_VERSION:-1.26}
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
     depends_on: [auth, comm]
-    env_file:
-      - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      CONFIG_PATH: /app/config/config.yml
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      CONFIG_PATH: /root/config/config.yml
       JWT_SECRET: ${JWT_SECRET}
-      SERVICE_PORT: ${API_GATEWAY_PORT:-8000}
+      API_GATEWAY_ADDRESS: ":8000"
+      AUTH_SERVICE_URL: "http://auth:8001"
+      COMM_SERVICE_URL: "http://comm:8002"
+    networks:
+      - internal
+      - public
     ports:
-      - ${API_GATEWAY_PORT}:${API_GATEWAY_PORT}
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on: [gateway]
+    networks:
+      - public
+    ports:
+      - "3000:80"
 
 volumes:
   pgdata:
+
+networks:
+  internal:
+  public:
