@@ -110,8 +110,28 @@ func (db *DB) logQuery(op, query string, args []any, dur time.Duration, err erro
 	}
 
 	if dur > (time.Millisecond * 500) {
-		logger.Warn("SQL query executed too long")
+		logger.Warn("SQL query executed for too long")
 	}
 
 	db.logger.Debug("SQL query executed")
+}
+
+func InitDB(
+	dsn string,
+	maxOpenConns int,
+	maxIdleConns int,
+	connMaxIdleTime time.Duration,
+	logger *slog.Logger,
+) (*DB, error) {
+	dbx, err := sqlx.Connect("postgres", dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	dbx.SetMaxOpenConns(maxOpenConns)
+	dbx.SetMaxIdleConns(maxOpenConns)
+	dbx.SetConnMaxIdleTime(connMaxIdleTime)
+
+	db := NewDB(dbx, logger)
+	return db, nil
 }
