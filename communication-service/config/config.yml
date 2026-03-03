@@ -1,0 +1,5 @@
+env: "local"
+postgre_dsn: $DATABASE_URL
+jwt_secret: $JWT_SECRET
+server:
+  address: $COMM_SERVICE_ADDRESS
